@@ -95,31 +95,35 @@ The loop self-terminates on:
 
 Per-iter logs live in `.loopguard/`. Failure summary in `.loopguard/progress.md`.
 
-## The eight layers
+## The ten layers (v0.2)
 
-| # | Layer | Where |
-|---|---|---|
-| 1 | PRD discipline | one story = one context window | `templates/prd.schema.json` |
-| 2 | Fresh context per iter | kills Dumb-Zone drift | `claude -p --no-session-persistence` |
-| 3 | Triple cost cap | iter, $, wall-clock | env vars + `--max-budget-usd` |
-| 4 | Programmatic verifier | "done" = exit 0, not self-report | `scripts/verify.sh` |
-| 5 | Independent critic | cold-read diff vs spec | `scripts/critic.sh` uses `--bare` |
-| 6 | Failure log | next iter sees prior failures | `.loopguard/progress.md` tail-60 |
-| 7 | Scope guard | diff > N or file outside whitelist → revert | `scripts/scope-check.sh` |
-| 8 | Anti-thrash | 3 iters with ≥80% same diff → halt | `scripts/thrash-detect.sh` |
+| # | Layer | Provenance | Where |
+|---|---|---|---|
+| 1 | PRD discipline | snarktank/ralph (19k) + jmilinovich/goal-md | `templates/prd.schema.json` |
+| 2 | Fresh context per iter | snarktank/ralph (canonical) | `claude -p --no-session-persistence` |
+| 3 | Triple cost cap (iter / $ / time) | AnandChowdhary/continuous-claude (1.3k) | env vars + `--max-budget-usd` |
+| **3b** | **Rate cap (calls/hour)** | **frankbria/ralph-claude-code (9k)** | `MAX_CALLS_PER_HOUR` |
+| 4a | Programmatic verifier | snarktank "feedback loops" | `scripts/verify.sh` |
+| **4b** | **Dual exit gate (`EXIT_SIGNAL`)** | **frankbria (9k)** | builder prompt + grep in loop |
+| 5 | Independent critic (`--bare`) | own integration of `claude -p --bare` | `scripts/critic.sh` |
+| **5b** | **Council of critics (opt-in)** | **asdlc.io adversarial review + Apex-CodeGenesis + MAVEN paper 2026** | `scripts/council.sh` |
+| 6a | Failure log | snarktank `progress.txt` | `.loopguard/progress.md` tail-60 |
+| **6b** | **Cumulative learnings** | **snarktank AGENTS.md pattern** | `.loopguard/LEARNINGS.md` |
+| 7 | Scope guard (own) | uniquely loopguard's | `scripts/scope-check.sh` |
+| 8 | Anti-thrash | frankbria circuit breakers | `scripts/thrash-detect.sh` |
 
-See [`docs/architecture.md`](docs/architecture.md) for the per-iter sequence diagram and rationale.
+See [`docs/why.md`](docs/why.md) for the full project-by-project comparison with real star counts, and [`docs/architecture.md`](docs/architecture.md) for the per-iter sequence diagram.
 
-## Comparison
+## Comparison (real star counts)
 
-| | Fresh ctx | Cost cap | Verifier | Critic | Scope guard | Thrash detect |
-|---|---|---|---|---|---|---|
-| Official ralph-loop | ✗ | ✗ | weak (string match) | ✗ | ✗ | ✗ |
-| frankbria/ralph-claude-code | ✗ (Stop hook) | partial | ✓ | ✗ | ✗ | partial |
-| snarktank/ralph | ✓ | ✗ | weak | ✗ | ✗ | ✗ |
-| continuous-claude | ✗ | ✓ | ✓ | ✓ (Codex) | ✗ | ✗ |
-| Anthropic `/goal` | ✗ | ✗ | weak (Haiku eval) | ✗ | ✗ | ✗ |
-| **loopguard** | ✓ | ✓ (triple) | ✓ | ✓ | ✓ | ✓ |
+| | ⭐ | Fresh ctx | $ cap | Rate cap | Verifier | EXIT_SIGNAL | Critic | Council | Scope | Thrash | Learnings |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| [snarktank/ralph](https://github.com/snarktank/ralph) | 19k | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | AGENTS.md |
+| [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code) | 9k | ✗ Stop-hook | partial | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ |
+| [continuous-claude](https://github.com/AnandChowdhary/continuous-claude) | 1.3k | partial | ✓ | partial | ✓ | partial | ✓ Codex | ✗ | ✗ | partial | ✗ |
+| Official ralph-loop | — | ✗ | ✗ | ✗ | weak | weak | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Native `/goal` | — | ✗ | ✗ | ✗ | weak | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **loopguard** | new | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ opt-in | ✓ | ✓ | ✓ |
 
 ## What it WON'T fix
 

@@ -22,16 +22,20 @@ Do NOT trigger for:
 - One-shot tasks that fit in a single context window without iteration
 - SEO / content / domain-specific loops that have their own skill (`seo-geo-loop`, `site-launch-loop`, etc.) — those skills have their own discipline; loopguard is a generic code-execution loop
 
-## The eight guardrails
+## The ten guardrails (v0.2)
 
 | # | Layer | Purpose | Where |
 |---|---|---|---|
 | 1 | PRD discipline | One story = one context window | `prd.json` schema |
-| 2 | Fresh context per iter | Kill Dumb-Zone drift | `claude -p` per builder call |
-| 3 | Triple cost cap | iter, $, wall-clock | `MAX_ITER`, `--max-budget-usd`, `MAX_DURATION_S` |
-| 4 | Programmatic verifier | "Done" requires exit 0, not self-report | `scripts/verify.sh` |
-| 5 | Independent critic | Cold-read review of diff vs spec | `scripts/critic.sh` (uses `--bare`) |
-| 6 | Failure context log | Next iter sees prior failure reason | `progress.md` prepended to prompt |
+| 2 | Fresh context per iter | Kill Dumb-Zone drift (snarktank/ralph 19k pattern) | `claude -p --no-session-persistence` |
+| 3 | Triple cost cap | iter, $, wall-clock (continuous-claude pattern) | `MAX_ITER`, `--max-budget-usd`, `MAX_DURATION_S` |
+| 3b | **Rate cap** | Calls-per-hour limit (**frankbria/ralph-claude-code 9k pattern**) | `MAX_CALLS_PER_HOUR` |
+| 4a | Programmatic verifier | Exit 0, not self-report | `scripts/verify.sh` |
+| 4b | **Dual exit gate** | Verify + builder `EXIT_SIGNAL: ready` BOTH required (**frankbria pattern**) | builder prompt + `grep EXIT_SIGNAL` in loop |
+| 5 | Independent critic | Cold-read via `--bare` | `scripts/critic.sh` |
+| 5b | **Council of critics** | Optional: parallel architect/secops/qa personas, AND-aggregated (asdlc.io + MAVEN paper) | `scripts/council.sh` (env `CRITIC_COUNCIL`) |
+| 6a | Failure context log | Tail-60 of `progress.md` prepended | `progress.md` |
+| 6b | **Cumulative learnings** | Non-obvious codebase facts persist across iters (**snarktank/ralph AGENTS.md pattern**) | `LEARNINGS.md` |
 | 7 | Scope guard | Block diff > N lines or files outside whitelist | `scripts/scope-check.sh` (auto-revert) |
 | 8 | Anti-thrash | Halt if 3 iters produce ≥80% same diff | `scripts/thrash-detect.sh` |
 
@@ -101,15 +105,32 @@ When the user invokes loopguard, follow this routing:
 
 ## Cost-cap composition
 
-Three caps; first to trip wins:
+Four caps; first to trip wins:
 
 ```
 MAX_ITER             # default 20 — coarse safety net
-MAX_COST_USD         # default 15 — passed to each `claude -p --max-budget-usd`
+MAX_COST_USD         # default 15 — total $; per-iter = total/iter × 1.5
 MAX_DURATION_S       # default 10800 (3h) — wall-clock guard
+MAX_CALLS_PER_HOUR   # default 60 — rate limit (frankbria pattern: prevents
+                     #              fast iters from burning hourly quota)
 ```
 
-Per-iter cost cap (`--max-budget-usd` divided by `MAX_ITER`) prevents a single runaway iter from eating the whole budget.
+Per-iter cost cap (`--max-budget-usd` derived from total/iter × 1.5) prevents a single runaway iter from eating the whole budget.
+
+## Council-of-critics (opt-in)
+
+Default critic is a single generalist `claude -p --bare` cold-read. For important stories, enable the council:
+
+```bash
+CRITIC_COUNCIL=architect,secops,qa ./scripts/loopguard.sh
+```
+
+Each persona runs in parallel against the same diff with specialized framing:
+- **architect**: design integrity, scope creep, abstractions, unauthorized deps
+- **secops**: command injection, path traversal, auth bypass, secret leaks
+- **qa**: off-by-one, null deref, races, missing edge cases, test gaps
+
+AND-aggregated: any single FAIL = council FAIL. Cost = N× single-critic cost. Pattern adapted from [asdlc.io adversarial review](https://asdlc.io/patterns/adversarial-code-review/) + Apex-CodeGenesis council-of-critics + 2026 MAVEN paper.
 
 ## Why each layer (the antipatterns it prevents)
 
