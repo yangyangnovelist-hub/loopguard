@@ -1,0 +1,39 @@
+{
+  "$schema": "../templates/prd.schema.json",
+  "project": "todo-cli (minimal example)",
+  "stories": [
+    {
+      "id": "S-001",
+      "spec": "Add a `--done` flag to the `list` subcommand. When passed, only completed todos (those with `completed: true`) are printed. Without the flag, behavior is unchanged. The reason: users complained that searching long lists for completed items is tedious.",
+      "acceptance_criteria": [
+        "scripts/verify.sh exits 0",
+        "Running `node cli.js list --done` on a fixture with 2 done + 3 pending todos prints exactly 2 lines",
+        "Running `node cli.js list` still prints all 5 lines",
+        "Help text for `list` mentions the new flag"
+      ],
+      "affected_files": [
+        "src/cli.ts",
+        "src/list.ts",
+        "src/list.test.ts"
+      ],
+      "max_diff_lines": 80,
+      "status": "pending"
+    },
+    {
+      "id": "S-002",
+      "spec": "Add an `--undone` flag that is the inverse of `--done`. Same reasoning. Mutually exclusive with `--done`; passing both should print an error and exit 2.",
+      "acceptance_criteria": [
+        "scripts/verify.sh exits 0",
+        "`node cli.js list --undone` on the fixture prints exactly 3 lines",
+        "`node cli.js list --done --undone` exits 2 with stderr containing 'mutually exclusive'"
+      ],
+      "affected_files": [
+        "src/cli.ts",
+        "src/list.ts",
+        "src/list.test.ts"
+      ],
+      "max_diff_lines": 60,
+      "status": "pending"
+    }
+  ]
+}

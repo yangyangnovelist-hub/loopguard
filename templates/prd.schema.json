@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "loopguard/prd",
+  "title": "loopguard PRD",
+  "description": "Multi-story PRD consumed by loopguard.sh. Each story must be implementable in one Claude Code context window.",
+  "type": "object",
+  "required": ["stories"],
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "stories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "spec", "acceptance_criteria", "affected_files", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Z]+-[0-9]+$",
+            "description": "Stable identifier, e.g. S-001"
+          },
+          "spec": {
+            "type": "string",
+            "minLength": 30,
+            "description": "One paragraph: what + why + observable change"
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"},
+            "description": "Programmatically checkable assertions. scripts/verify.sh exit 0 should always be one of them."
+          },
+          "affected_files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"},
+            "description": "Whitelist of files the builder may touch. Globs (*, ?) supported. Files outside this list trigger scope-violation revert."
+          },
+          "max_diff_lines": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 300,
+            "description": "Hard cap on (insertions + deletions). Exceeded → auto-revert."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "passed"],
+            "default": "pending"
+          }
+        }
+      }
+    }
+  }
+}

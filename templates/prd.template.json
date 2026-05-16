@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/yangyangnovelist-hub/loopguard/main/templates/prd.schema.json",
+  "project": "REPLACE — your project slug",
+  "stories": [
+    {
+      "id": "S-001",
+      "spec": "REPLACE — one paragraph. WHAT to build, WHY it matters (the user/business reason), and the single observable behavior change. If you can't say this in one paragraph, the story is too big — split it.",
+      "acceptance_criteria": [
+        "scripts/verify.sh exits 0",
+        "REPLACE — another programmatically checkable assertion",
+        "REPLACE — and another (3-5 total is healthy)"
+      ],
+      "affected_files": [
+        "src/REPLACE.ts",
+        "src/REPLACE.test.ts",
+        "REPLACE/*.json"
+      ],
+      "max_diff_lines": 200,
+      "status": "pending"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "../templates/prd.schema.json",
+  "project": "feature-flag system (larger example, 4 stories)",
+  "stories": [
+    {
+      "id": "FF-001",
+      "spec": "Create a `FeatureFlag` interface and a `FlagRegistry` class with `get(name): boolean` and `register(name, default)`. Reads override values from `process.env.FF_<NAME>` (FF_DARKMODE=1 enables 'darkmode'). No persistence — process-local only. This is the foundation; subsequent stories build on it.",
+      "acceptance_criteria": [
+        "scripts/verify.sh exits 0",
+        "Unit test: registering a flag with default false and no env var returns false from get()",
+        "Unit test: env var FF_DARKMODE=1 makes get('darkmode') return true",
+        "Unit test: env var FF_DARKMODE=0 forces false even if default is true"
+      ],
+      "affected_files": [
+        "src/feature-flags/registry.ts",
+        "src/feature-flags/index.ts",
+        "src/feature-flags/registry.test.ts"
+      ],
+      "max_diff_lines": 150,
+      "status": "pending"
+    },
+    {
+      "id": "FF-002",
+      "spec": "Add a `loadFromFile(path)` method on FlagRegistry that reads a JSON file `{ flagName: boolean }` and registers each flag with the given default. Env vars still override file values. Why: ops wants to flip flags without redeploying.",
+      "acceptance_criteria": [
+        "scripts/verify.sh exits 0",
+        "Unit test: loading `{darkmode: true, beta: false}` registers both flags with given defaults",
+        "Unit test: FF_DARKMODE=0 overrides file's true default"
+      ],
+      "affected_files": [
+        "src/feature-flags/registry.ts",
+        "src/feature-flags/registry.test.ts",
+        "src/feature-flags/fixtures/*.json"
+      ],
+      "max_diff_lines": 100,
+      "status": "pending"
+    },
+    {
+      "id": "FF-003",
+      "spec": "Add a `withFlag(name, callback)` helper that runs the callback only if the flag is on, otherwise returns undefined. Used to gate code paths without if-statements scattered everywhere.",
+      "acceptance_criteria": [
+        "scripts/verify.sh exits 0",
+        "Unit test: callback runs and its return value is returned when flag is on",
+        "Unit test: callback does NOT run when flag is off and undefined is returned"
+      ],
+      "affected_files": [
+        "src/feature-flags/with-flag.ts",
+        "src/feature-flags/index.ts",
+        "src/feature-flags/with-flag.test.ts"
+      ],
+      "max_diff_lines": 80,
+      "status": "pending"
+    },
+    {
+      "id": "FF-004",
+      "spec": "Expose a CLI `node bin/ff.js list` that prints all registered flags and their current resolved values (default → file → env) in a table. Loads `./flags.json` if present. Reason: support team wants to inspect prod config without reading code.",
+      "acceptance_criteria": [
+        "scripts/verify.sh exits 0",
+        "Running `node bin/ff.js list` with a flags.json containing 2 flags prints a 2-row table",
+        "Each row shows name, default, current_value, source (default|file|env)"
+      ],
+      "affected_files": [
+        "bin/ff.js",
+        "src/feature-flags/cli.ts",
+        "src/feature-flags/cli.test.ts"
+      ],
+      "max_diff_lines": 200,
+      "status": "pending"
+    }
+  ]
+}
